@@ -8,15 +8,20 @@
 #include <QClipboard>
 #include <QPainter>
 
-static void findRecursion(const QString &path, const QString &pattern, QStringList *result)
+static void findRecursion(const QString &path, const QString &pattern, QStringList *result, bool inSubDir = true)
 {
     QDir currentDir(path);
     const QString prefix = path + QLatin1Char('/');
-    foreach (const QString &match, currentDir.entryList(QStringList(pattern), QDir::Files | QDir::NoSymLinks)) {
+    foreach (const QString &match, currentDir.entryList(QStringList(pattern), QDir::Files | QDir::NoSymLinks))
+    {
         result->append(prefix + match);
     }
-    foreach (const QString &dir, currentDir.entryList(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot)) {
-        findRecursion(prefix + dir, pattern, result);
+    if (inSubDir)
+    {
+        foreach (const QString &dir, currentDir.entryList(QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot))
+        {
+            findRecursion(prefix + dir, pattern, result, inSubDir);
+        }
     }
 }
 
@@ -68,7 +73,7 @@ void MainWindow::find()
     QString path = QDir::cleanPath(ui->directoryComboBox->currentText());
     currentDir = QDir(path);
     QStringList files;
-    findRecursion(path, "*." + FILE_FORMAT, &files);
+    findRecursion(path, "*." + FILE_FORMAT, &files, ui->subdirkBox->isChecked());
     ui->progressBar->setValue(50);
     showFiles(files);
     ui->progressBar->setValue(100);
@@ -97,7 +102,7 @@ void MainWindow::procceed()
         QImage image(fileName, FILE_FORMAT.toLatin1().data());
         int leftWidth = image.width() % multiple;
         int leftHeight = image.height() % multiple;
-        QImage newImage(image.width() + leftWidth, image.height() + leftHeight, image.format());
+        QImage newImage(image.width() + (leftWidth ? (multiple - leftWidth) : 0), image.height() + (leftHeight ? (multiple - leftHeight) : 0), image.format());
         newImage.fill(Qt::transparent);
         QPainter painter(&newImage);
         // Center the image if need
